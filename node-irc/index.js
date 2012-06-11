@@ -20,6 +20,7 @@ exports.Client.prototype.connect = function(host, port) {
   server.connect(port || 6667, host);
 
   this.servers.push(server);
+  return server;
 }
 
 exports.Client.prototype.eventHandler = function(event) {

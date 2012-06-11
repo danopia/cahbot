@@ -48,8 +48,10 @@ exports.Server.prototype.send = function(command, params) {
     }
 
     this.write(command.toUpperCase() + ' ' + params.join(' ') + "\r\n");
+    console.log('>> ' + command.toUpperCase() + ' ' + params.join(' '));
   } else {
     this.write(command.toUpperCase() + "\r\n");
+    console.log('>> ' + command.toUpperCase());
   }
 }
 

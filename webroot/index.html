@@ -1,0 +1,184 @@
+<html>
+  <head>
+    <title>Cards Against Humanity</title>
+
+    <style>
+      body, html { margin: 0; padding: 0; overflow: hidden; }
+
+      #players {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 200px;
+        overflow: auto;
+      }
+
+      .page {
+        position: fixed;
+        top: 0;
+        right: 200px;
+        bottom: 0;
+        left: 0;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game" style="display: none;">
+      <div class="page" id="round">
+        <header>
+          <h1>Black Card</h1>
+          <h2>Judge</h2>
+        </header>
+        <section id="sets">
+          <p>Submitted cards:</p>
+          <ul></ul>
+        </section>
+        <section id="hand">
+          <p>Your hand:</p>
+          <ul></ul>
+        </section>
+      </div>
+
+      <div class="page" id="waiting">
+        <h1>Waiting for the game to start</h1>
+        <p>
+          <button id="startGame">Start now</button>
+        </p>
+      </div>
+
+      <div class="page" id="welcome">
+        <p>
+          Username:
+          <input type="text" id="username"/>
+          <button id="joinGame">Join game</button>
+        </p>
+      </div>
+
+      <div id="players">
+        <h3>Current Players</h3>
+        <ul></ul>
+      </div>
+    </div>
+
+    <div id="loading">
+      <h1>Loading...</h1>
+    </div>
+
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.js"></script>
+    <script>
+      $(function() {
+        $('#round').hide();
+        $('#waiting').hide();
+
+        $('#loading').hide();
+        $('#game').show();
+
+        var socket = io.connect('http://home.danopia.net');
+        var lis = {};
+
+        socket.on('newPlayer', function(e) {
+          var li = $('<li/>');
+          lis[e] = li;
+
+          li.text(e);
+
+          $('#players ul').append(li);
+        });
+
+        socket.on('gameStart', function(e) {
+          $('#waiting').hide();
+          $('#round').show();
+        });
+
+        var blanks = 0;
+        socket.on('roundStart', function(e) {
+          $('#round h1').text(e[1]);
+          $('#round h2').text('Judge: ' + e[0]);
+          $('#round #sets').hide();
+
+          blanks = e[1].split('_').length - 1;
+        });
+
+        var set = [];
+        socket.on('pickingStart', function(e) {
+          set = [];
+        });
+
+        socket.on('handReady', function(e) {
+          var $ul = $('#round #hand ul');
+          $ul.html('');
+
+          for (var i in e) {
+            if (i.length == 1) {
+              var $li = $('<li/>');
+              $li.attr('x-id', i);
+              $li.text(e[i]);
+              $ul.append($li);
+            }
+          }
+
+          $('#round #hand').show();
+        });
+
+        socket.on('pick', function(e) {
+        });
+
+        socket.on('pickingEnd', function(e) {
+          $('#round #hand').hide();
+        });
+
+        socket.on('judgingStart', function(e) {
+          $('#round #sets').show();
+
+          var $ul = $('#round #sets ul');
+          $ul.html('');
+
+          for (var i in e) {
+            var $li = $('<li/>');
+            $li.attr('x-id', i);
+            $li.text(Array.prototype.join.call(e[i], ', '));
+            $ul.append($li);
+          }
+        });
+
+        socket.on('judgingEnd', function(e) {
+          $('#round #hide').show();
+
+          alert(e[0] + ' won with ' + Array.prototype.join.call(e[1], ', '));
+        });
+
+        socket.on('addPoint', function(e) {
+        });
+
+
+        $('#joinGame').on('click', function() {
+          var username = $('#username').val();
+          socket.emit('join', username);
+          $('#welcome').hide();
+          $('#waiting').show();
+        });
+
+        $('#startGame').on('click', function() {
+          socket.emit('start');
+        });
+
+        $('#hand').on('click', 'li', function(e) {
+          set.push($(e.currentTarget).attr('x-id'));
+          if (set.length == blanks) {
+            socket.emit('pick', set);
+            $('#round #hand').hide();
+          }
+        });
+
+        $('#sets').on('click', 'li', function(e) {
+          console.log(e);
+          socket.emit('pick', $(e.currentTarget).attr('x-id'));
+        });
+      });
+    </script>
+
+  </body>
+</html>
